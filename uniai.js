@@ -1,72 +1,85 @@
-function initializeChat() {
-    document.getElementById('send-button').onclick = async function () {
-        const inputBox = document.getElementById('input-box');
-        const model = document.getElementById('model-selector').value;
-        const question = inputBox.value;
+document.getElementById('send-button').onclick = async function () {
+    const inputBox = document.getElementById('input-box');
+    const model = document.getElementById('model-selector').value;
+    const question = inputBox.value;
+    if (!question) return;
 
-        if (!question) return;
+    addMessage('User', question);
 
-        // 添加用户消息到页面
-        addMessageToChat('User', question, 'user');
+    const loadingMessage = addMessage('AI', 'Loading...', true); // true for loading state
 
-        // 显示加载动画
-        const loadingMessage = addMessageToChat('Loading...', '', 'loading');
+    const response = await fetch('https://uniai.swoslzaiijnma.workers.dev/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            questions: question,
+            history: [], // 可以存储历史记录
+            model: model
+        })
+    });
 
-        // 发送请求
-        const response = await fetch('https://uniai.swoslzaiijnma.workers.dev/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                questions: question,
-                history: [], // 可以存储历史记录
-                model: model
-            })
-        });
+    const result = await response.json();
 
-        const result = await response.json();
+    // 移除加载消息
+    loadingMessage.remove();
 
-        // 移除加载动画
-        loadingMessage.remove();
+    // 显示AI消息
+    typeEffect(addMessage('AI', ''), result.answer.response);
+    inputBox.value = '';
+};
 
-        // 添加AI消息到页面
-        addMessageToChat(model, result.answer, 'ai');
-        inputBox.value = '';
-    };
+document.getElementById('clear-button').onclick = function () {
+    document.getElementById('input-box').value = '';
+};
 
-    document.getElementById('clear-button').onclick = function () {
-        document.getElementById('input-box').value = '';
-    };
+function addMessage(sender, text, loading = false) {
+    const messageContainer = document.createElement('div');
+    messageContainer.className = 'message bg-gray-100 rounded-lg p-2 my-2';
+
+    const senderLabel = document.createElement('div');
+    senderLabel.className = 'font-bold text-gray-700';
+    senderLabel.textContent = sender;
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.innerHTML = loading ? 'Loading...' : parseMarkdown(text);
+
+    messageContainer.appendChild(senderLabel);
+    messageContainer.appendChild(contentDiv);
+
+    document.getElementById('chat-content').appendChild(messageContainer);
+    document.getElementById('chat-content').scrollTop = document.getElementById('chat-content').scrollHeight;
+
+    return contentDiv; // 返回内容 div 以供 typeEffect 函数使用
 }
 
-function addMessageToChat(sender, message, type) {
-    const chatContent = document.getElementById('chat-content');
-    const messageDiv = document.createElement('div');
-    
-    // 应用样式
-    messageDiv.className = 'my-2 p-3 rounded-lg shadow-md';
-    
-    if (type === 'user') {
-        messageDiv.classList.add('bg-blue-100');
-    } else if (type === 'ai') {
-        messageDiv.classList.add('bg-green-100');
-    } else if (type === 'loading') {
-        messageDiv.classList.add('bg-gray-200');
+function typeEffect(element, text, speed = 50) {
+    let index = 0;
+
+    function typeNext() {
+        if (index < text.length) {
+            element.innerHTML += text.charAt(index);
+            index++;
+            setTimeout(typeNext, speed);
+        }
     }
-
-    // 处理Markdown格式
-    messageDiv.innerHTML = `<strong>${sender}:</strong><br>${convertMarkdown(message)}`;
     
-    chatContent.appendChild(messageDiv);
-    chatContent.scrollTop = chatContent.scrollHeight; // 滚动到最新消息
-    return messageDiv;
+    typeNext();
 }
 
-function convertMarkdown(message) {
-    // 简单处理Markdown格式，需扩展更多格式
-    return message
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // 粗体
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')              // 斜体
-        .replace(/`(.*?)`/g, '<code class="bg-gray-800 text-white p-1 rounded">$1</code>'); // 代码
+// 解析 Markdown 函数
+function parseMarkdown(text) {
+    // 这里添加Markdown解析逻辑
+    // 可以使用库如marked.js或自己实现简单解析
+    // 这是一个示例, 实际实现可能复杂
+    const boldRegex = /\*\*(.+?)\*\*/g;
+    const italicRegex = /\*(.+?)\*/g;
+    const codeRegex = /`(.+?)`/g;
+
+    return text
+        .replace(boldRegex, '<strong>$1</strong>')
+        .replace(italicRegex, '<em>$1</em>')
+        .replace(codeRegex, '<code>$1</code>');
 }
