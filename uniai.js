@@ -1,12 +1,18 @@
+let sendingMessage = false;
+
 document.getElementById('send-button').onclick = async function () {
+    if (sendingMessage) return;
+    sendingMessage = true;
+
     const inputBox = document.getElementById('input-box');
     const model = document.getElementById('model-selector').value;
     const question = inputBox.value.trim();
-    if (!question) return;
+    if (!question) {
+        sendingMessage = false;
+        return;
+    }
 
-    const chatContent = document.getElementById('chat-content');
     addMessage('User', question);
-
     const loadingMessage = addLoadingMessage('AI');
     inputBox.value = '';
 
@@ -28,6 +34,8 @@ document.getElementById('send-button').onclick = async function () {
     } catch (error) {
         loadingMessage.remove();
         addMessage('AI', 'Request failed: ' + error);
+    } finally {
+        sendingMessage = false;
     }
 };
 
@@ -61,7 +69,7 @@ function typeEffect(element, text, speed = 50) {
 
             function typeChar() {
                 if (charIndex < line.length) {
-                    element.lastChild.innerHTML += line.charAt(charIndex);
+                    element.innerHTML += line.charAt(charIndex);
                     charIndex++;
                     setTimeout(typeChar, speed);
                 } else {
@@ -77,8 +85,8 @@ function typeEffect(element, text, speed = 50) {
 }
 
 function parseMarkdown(text) {
-    // 在此处解析 Markdown，返回 HTML 字符串
     return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                .replace(/_(.*?)_/g, '<em>$1</em>')
-               .replace(/`(.*?)`/g, '<code>$1</code>');
+               .replace(/`(.*?)`/g, '<code style="background-color: #f0f0f0; padding: 2px 4px; border-radius: 3px;">$1</code>')
+               .replace(/\n/g, '<br>');
 }
