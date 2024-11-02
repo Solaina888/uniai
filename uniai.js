@@ -1,85 +1,84 @@
 document.getElementById('send-button').onclick = async function () {
     const inputBox = document.getElementById('input-box');
     const model = document.getElementById('model-selector').value;
-    const question = inputBox.value;
+    const question = inputBox.value.trim();
     if (!question) return;
 
+    const chatContent = document.getElementById('chat-content');
     addMessage('User', question);
 
-    const loadingMessage = addMessage('AI', 'Loading...', true); // true for loading state
-
-    const response = await fetch('https://uniai.swoslzaiijnma.workers.dev/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            questions: question,
-            history: [], // 可以存储历史记录
-            model: model
-        })
-    });
-
-    const result = await response.json();
-
-    // 移除加载消息
-    loadingMessage.remove();
-
-    // 显示AI消息
-    typeEffect(addMessage('AI', ''), result.answer.response);
+    const loadingMessage = addLoadingMessage('AI');
     inputBox.value = '';
+
+    try {
+        const response = await fetch('https://uniai.swoslzaiijnma.workers.dev/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                questions: question,
+                history: [], // 可以存储历史记录
+                model: model
+            })
+        });
+        const result = await response.json();
+        loadingMessage.remove(); // 移除加载消息
+        typeEffect(loadingMessage, result.answer.response);
+    } catch (error) {
+        loadingMessage.remove();
+        addMessage('AI', 'Request failed: ' + error);
+    }
 };
 
 document.getElementById('clear-button').onclick = function () {
     document.getElementById('input-box').value = '';
 };
 
-function addMessage(sender, text, loading = false) {
-    const messageContainer = document.createElement('div');
-    messageContainer.className = 'message bg-gray-100 rounded-lg p-2 my-2';
+function addMessage(sender, text) {
+    const message = document.createElement('div');
+    message.className = 'message p-2 mb-2 rounded-md bg-gray-100';
+    message.innerHTML = `<strong>${sender}:</strong> <div class="message-content">${parseMarkdown(text)}</div>`;
+    document.getElementById('chat-content').appendChild(message);
+}
 
-    const senderLabel = document.createElement('div');
-    senderLabel.className = 'font-bold text-gray-700';
-    senderLabel.textContent = sender;
-
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-    contentDiv.innerHTML = loading ? 'Loading...' : parseMarkdown(text);
-
-    messageContainer.appendChild(senderLabel);
-    messageContainer.appendChild(contentDiv);
-
-    document.getElementById('chat-content').appendChild(messageContainer);
-    document.getElementById('chat-content').scrollTop = document.getElementById('chat-content').scrollHeight;
-
-    return contentDiv; // 返回内容 div 以供 typeEffect 函数使用
+function addLoadingMessage(sender) {
+    const loadingMessage = document.createElement('div');
+    loadingMessage.className = 'message p-2 mb-2 rounded-md bg-gray-100';
+    loadingMessage.innerHTML = `<strong>${sender}:</strong> <div class="loader loader2"></div>`;
+    document.getElementById('chat-content').appendChild(loadingMessage);
+    return loadingMessage;
 }
 
 function typeEffect(element, text, speed = 50) {
-    let index = 0;
+    const lines = text.split('\n');
+    let lineIndex = 0;
 
-    function typeNext() {
-        if (index < text.length) {
-            element.innerHTML += text.charAt(index);
-            index++;
-            setTimeout(typeNext, speed);
+    function typeLine() {
+        if (lineIndex < lines.length) {
+            const line = lines[lineIndex];
+            let charIndex = 0;
+
+            function typeChar() {
+                if (charIndex < line.length) {
+                    element.lastChild.innerHTML += line.charAt(charIndex);
+                    charIndex++;
+                    setTimeout(typeChar, speed);
+                } else {
+                    lineIndex++;
+                    element.innerHTML += '<br>';
+                    setTimeout(typeLine, 100);
+                }
+            }
+            typeChar();
         }
     }
-    
-    typeNext();
+    typeLine();
 }
 
-// 解析 Markdown 函数
 function parseMarkdown(text) {
-    // 这里添加Markdown解析逻辑
-    // 可以使用库如marked.js或自己实现简单解析
-    // 这是一个示例, 实际实现可能复杂
-    const boldRegex = /\*\*(.+?)\*\*/g;
-    const italicRegex = /\*(.+?)\*/g;
-    const codeRegex = /`(.+?)`/g;
-
-    return text
-        .replace(boldRegex, '<strong>$1</strong>')
-        .replace(italicRegex, '<em>$1</em>')
-        .replace(codeRegex, '<code>$1</code>');
+    // 在此处解析 Markdown，返回 HTML 字符串
+    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+               .replace(/_(.*?)_/g, '<em>$1</em>')
+               .replace(/`(.*?)`/g, '<code>$1</code>');
 }
