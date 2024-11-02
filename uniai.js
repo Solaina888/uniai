@@ -83,26 +83,21 @@ document.addEventListener('DOMContentLoaded', function() {
         inputBox.value = '';
 
         try {
-            const response = await fetch('https://your-worker-url.workers.dev/', {
+            // 使用原有的API地址
+            const response = await fetch('https://uniai.swoslzaiijnma.workers.dev/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     questions: question,
-                    history: chatHistory,
+                    history: [], // 保持原有的空历史记录数组
                     model: modelSelector.value
                 })
             });
 
             const result = await response.json();
             
-            // 更新历史记录
-            chatHistory.push(
-                { sender: 'user', content: question },
-                { sender: 'assistant', content: result.answer.response }
-            );
-
             // 替换加载动画为AI响应
             const aiContent = aiCard.querySelector('.markdown-content');
             aiContent.innerHTML = '';
@@ -116,10 +111,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 事件监听器
     sendButton.onclick = handleSend;
-    clearButton.onclick = () => {
+    
+    // 保持原有的clear按钮功能
+    clearButton.onclick = function() {
         inputBox.value = '';
     };
     
+    // 添加Enter键发送功能
     inputBox.onkeypress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
